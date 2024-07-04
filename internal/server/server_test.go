@@ -1,9 +1,12 @@
 package server
 
 import (
-	"github.com/heroku/docker-registry-client/registry"
-	"hua-cloud.com/tools/image-sync/internal/config"
+	"sync"
 	"testing"
+
+	"github.com/heroku/docker-registry-client/registry"
+	"github.com/opencontainers/go-digest"
+	"hua-cloud.com/tools/image-sync/internal/config"
 )
 
 func TestImageServer_GetManifest(t *testing.T) {
@@ -28,43 +31,57 @@ func TestImageServer_GetManifest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if exists, err := server.HasBlob(repo, manifest.Config.Digest); err != nil {
+	// 上传配置清单
+	if err := uploadBlob(repo, manifest.Config.Digest, server, srcRegistry); err != nil {
 		t.Fatal(err)
-	} else if !exists {
-		configBlob, err := srcRegistry.DownloadBlob(repo, manifest.Config.Digest)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := server.UploadBlob(manifest.Config.Digest, repo, configBlob); err != nil {
-			t.Fatal(err)
-		}
 	}
 
 	t.Logf("manifest is: %v\n", manifest.Manifest)
-	for _, layer := range manifest.Layers {
-		t.Logf("layer is: %v\n", layer.Digest)
-		exists, err := server.HasBlob(repo, layer.Digest)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if exists {
-			t.Logf("blog: %s exists: \n", layer.Digest.String())
-			continue
-		}
-		blob, err := srcRegistry.DownloadBlob(repo, layer.Digest)
 
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = server.UploadBlob(layer.Digest, repo, blob)
-		if err != nil {
-			t.Fatal(err)
-		}
+	wg := sync.WaitGroup{}
+
+	for _, layer := range manifest.Layers {
+
+		wg.Add(1)
+
+		func() {
+			defer wg.Done()
+
+			t.Logf("layer is: %v\n", layer.Digest)
+			// 上传layer
+			if err := uploadBlob(repo, layer.Digest, server, srcRegistry); err != nil {
+				t.Fatal(err)
+			}
+		}()
 	}
 
-	err = server.PushManifest(repo, tag, manifest)
+	wg.Wait()
 
-	if err != nil {
+	// 更新manifest
+	if err = server.PushManifest(repo, tag, manifest); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func uploadBlob(repo string, digest digest.Digest, serv *ImageServer, srcRegistry *registry.Registry) error {
+
+	// 检测blob hash是否存在
+	exists, err := serv.HasBlob(repo, digest)
+
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		serv.Log.Info("blog exists,ignored")
+		return nil
+	}
+
+	blob, err := srcRegistry.DownloadBlob(repo, digest)
+
+	if err != nil {
+		return err
+	}
+
+	return serv.UploadBlob(digest, repo, blob)
 }

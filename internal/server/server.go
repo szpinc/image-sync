@@ -1,13 +1,14 @@
 package server
 
 import (
+	"io"
+
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/gin-gonic/gin"
 	"github.com/heroku/docker-registry-client/registry"
 	"github.com/opencontainers/go-digest"
 	"hua-cloud.com/tools/image-sync/internal/config"
 	"hua-cloud.com/tools/image-sync/internal/util"
-	"io"
 )
 
 type ImageServer struct {
@@ -35,6 +36,10 @@ func NewImageServer(serverConfig *config.ServerConfig) *ImageServer {
 func (s *ImageServer) Start() {
 
 	s.Log.Info("Server starting at %s", s.Config.Addr)
+
+	InitRouters(s.engine)
+
+	imageServer = s
 
 	err := s.engine.Run(s.Config.Addr)
 	if err != nil {
