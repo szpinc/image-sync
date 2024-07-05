@@ -1,28 +1,22 @@
 package middleware
 
 import (
+	"hua-cloud.com/tools/image-sync/internal/types"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-// 返回结构体
-type resp struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Data    any    `json:"data"`
-}
-
-func errResp(message string) resp {
-	return resp{
+func errResp(message string) types.Resp {
+	return types.Resp{
 		Code:    http.StatusInternalServerError,
 		Message: message,
 		Data:    nil,
 	}
 }
 
-func okResp(data interface{}) resp {
-	return resp{
+func okResp(data interface{}) types.Resp {
+	return types.Resp{
 		Code:    http.StatusOK,
 		Message: "ok",
 		Data:    data,

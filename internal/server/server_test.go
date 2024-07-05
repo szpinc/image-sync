@@ -85,3 +85,18 @@ func uploadBlob(repo string, digest digest.Digest, serv *ImageServer, srcRegistr
 
 	return serv.UploadBlob(digest, repo, blob)
 }
+
+func TestGetManifest(t *testing.T) {
+	repo, tag := "park/tibmas2-webapi", "20240624114951"
+
+	srcRegistry, _ := registry.New("http://harbor.hy-zw.com", "admin", "Hyzs(%23@7&8")
+
+	manifest, err := srcRegistry.ManifestV2(repo, tag)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, layer := range manifest.Layers {
+		t.Log(layer.Digest)
+	}
+}

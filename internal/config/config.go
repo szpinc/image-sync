@@ -1,9 +1,12 @@
 package config
 
+import "github.com/gin-gonic/gin"
+
 type ServerConfig struct {
 	Addr           string         `yaml:"addr"`
 	RegistryConfig RegistryConfig `yaml:"registry"`
 	LogConfig      LogConfig      `yaml:"log"`
+	Accounts       gin.Accounts   `yaml:"accounts"`
 }
 
 type RegistryConfig struct {

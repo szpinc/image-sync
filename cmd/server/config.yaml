@@ -1,0 +1,8 @@
+addr: ":23333"
+registry:
+  url: http://127.0.0.1:50000
+#  url: http://harbor.hy-zw.com
+#  username: admin
+#  password: "Hyzs(%23@7&8"
+log:
+  level: debug
