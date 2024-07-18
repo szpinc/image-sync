@@ -9,3 +9,5 @@ type CmdRequest struct {
 	DockerComposeFile string `json:"dockerComposeFile"`
 	Deploy            bool   `json:"deploy"`
 }
+
+type ErrorNotAuthed error

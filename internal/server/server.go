@@ -37,7 +37,8 @@ func (s *ImageServer) Start() {
 
 	s.Log.Info("Server starting at %s", s.Config.Addr)
 
-	InitRouters(s.engine)
+	// 初始化路由
+	s.InitRouters()
 
 	imageServer = s
 

@@ -6,14 +6,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/avast/retry-go"
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/heroku/docker-registry-client/registry"
 	"github.com/opencontainers/go-digest"
 	"hua-cloud.com/tools/image-sync/internal/types"
-	"io"
-	"net/http"
-	"sync"
 )
+
+var ErrUnauthorized = errors.New("Unauthorized")
 
 type Client struct {
 	config *types.ClientConfig
@@ -24,39 +31,19 @@ func NewClient(config *types.ClientConfig) *Client {
 }
 
 func (c *Client) CheckBlobExists(repository string, digest digest.Digest) (bool, error) {
-	url := fmt.Sprintf("%s/api/v1/blob/exists?repository=%s&digest=%s", c.config.Server.Address, repository, digest)
 
-	req, _ := http.NewRequest(http.MethodGet, url, nil)
-
-	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", c.config.Server.Username, c.config.Server.Password))))
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return false, err
-	}
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		return false, errors.New(resp.Status)
-	}
-
-	body, err := io.ReadAll(resp.Body)
+	result, err := c.doRequest(
+		http.MethodGet,
+		fmt.Sprintf("%s/api/v1/blob/exists?repository=%s&digest=%s", c.config.Server.Address, repository, digest),
+		nil,
+		"application/json",
+	)
 
 	if err != nil {
-		return false, err
+		return false, checkError(err)
 	}
 
-	res := types.Resp{}
-
-	_ = json.Unmarshal(body, &res)
-
-	if res.Code != http.StatusOK {
-		return true, errors.New(string(body))
-	}
-
-	exists, _ := res.Data.(bool)
+	exists, _ := result.Data.(bool)
 
 	return exists, nil
 }
@@ -65,22 +52,9 @@ func (c *Client) UploadBlob(repository string, digest digest.Digest, data io.Rea
 
 	url := fmt.Sprintf("%s/api/v1/blob/uploads?repository=%s&digest=%s", c.config.Server.Address, repository, digest)
 
-	req, err := http.NewRequest(http.MethodPut, url, data)
+	_, err := c.doRequest(http.MethodPut, url, data, "application/octet-stream")
 
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", c.config.Server.Username, c.config.Server.Password))))
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return errors.New(resp.Status)
-	}
-	return nil
+	return checkError(err)
 }
 
 func (c *Client) PutManifest(repository string, tag string, manifest *schema2.DeserializedManifest) error {
@@ -89,32 +63,19 @@ func (c *Client) PutManifest(repository string, tag string, manifest *schema2.De
 
 	url := fmt.Sprintf("%s/api/v1/manifest/push?repository=%s&tag=%s", c.config.Server.Address, repository, tag)
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestBody))
+	_, err := c.doRequest(http.MethodPost, url, bytes.NewBuffer(requestBody), "application/json")
 
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", c.config.Server.Username, c.config.Server.Password))))
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return errors.New(resp.Status)
-	}
-	return nil
+	return checkError(err)
 }
 
 func (c *Client) Copy(repository string, tag string) error {
-	registryConf := c.config.Registry
-	registryClient, err := registry.New(registryConf.Url, registryConf.Username, registryConf.Password)
+
+	// 创建registry client
+	registryClient, err := newRegistryClient(c.config.Registry)
 
 	if err != nil {
 		return err
 	}
-	registryClient.Logf = func(format string, args ...interface{}) {}
 
 	manifest, err := registryClient.ManifestV2(repository, tag)
 
@@ -122,30 +83,34 @@ func (c *Client) Copy(repository string, tag string) error {
 		return err
 	}
 
-	wg := sync.WaitGroup{}
+	digests := []digest.Digest{}
 
-	go func() {
-		wg.Add(1)
-		defer wg.Done()
-		// 上传配置清单
-		if err := uploadBlob(repository, manifest.Config.Digest, c, registryClient); err != nil {
-			panic(err)
-		}
-	}()
+	// 添加配置blob
+	digests = append(digests, manifest.Config.Digest)
 
 	for _, layer := range manifest.Layers {
-
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-			// 上传layer
-			if err := uploadBlob(repository, layer.Digest, c, registryClient); err != nil {
-				panic(err)
-			}
-		}()
+		digests = append(digests, layer.Digest)
 	}
 
+	wg := sync.WaitGroup{}
+
+	for _, blob := range digests {
+		wg.Add(1)
+		go func(blob digest.Digest) {
+			defer wg.Done()
+			// 上传layer,引入重试,5秒重试一次
+			err := retry.Do(func() error {
+				fmt.Printf("copy blob: %s\n", blob.String())
+				return checkError(uploadBlob(repository, blob, c, registryClient))
+			},
+				retry.Attempts(5),
+				retry.Delay(time.Second*5),
+			)
+			if err != nil {
+				panic(err)
+			}
+		}(blob)
+	}
 	wg.Wait()
 
 	// 更新manifest
@@ -193,8 +158,6 @@ func (c *Client) Deploy(request types.CmdRequest) error {
 }
 
 func uploadBlob(repo string, digest digest.Digest, c *Client, srcRegistry *registry.Registry) error {
-
-	println("copy blob: ", digest.String())
 	// 检测blob hash是否存在
 	exists, err := c.CheckBlobExists(repo, digest)
 
@@ -232,4 +195,87 @@ func getRespBody(body io.ReadCloser) (*types.Resp, error) {
 	println(string(data))
 	resp := types.Resp{}
 	return &resp, json.Unmarshal(data, &resp)
+}
+
+func newRegistryClient(conf types.RegistryConfig) (*registry.Registry, error) {
+	transport := registry.WrapTransport(http.DefaultTransport, conf.Url, conf.Username, conf.Password)
+
+	url := strings.TrimSuffix(conf.Url, "/")
+
+	reg := &registry.Registry{
+		URL: url,
+		Client: &http.Client{
+			Transport: transport,
+		},
+		Logf: registry.Quiet,
+	}
+
+	if err := reg.Ping(); err != nil {
+		return nil, err
+	}
+
+	return reg, nil
+}
+
+func (c *Client) doRequest(method string, url string, body io.Reader, contentType string) (*types.Resp, error) {
+
+	req, err := http.NewRequest(method, url, body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", c.config.Server.Username, c.config.Server.Password))))
+
+	resp, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, ErrUnauthorized
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(resp.Status)
+	}
+
+	res := types.Resp{}
+
+	respBody, err := io.ReadAll(resp.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(respBody, &res)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if res.Code != http.StatusOK {
+		return &res, errors.New(res.Message)
+	}
+
+	return &res, nil
+}
+
+func checkError(err error) error {
+
+	if err == nil {
+		return nil
+	}
+
+	if err == ErrUnauthorized {
+		fmt.Println("Unauthorized")
+		os.Exit(1)
+	}
+	return err
 }

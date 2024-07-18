@@ -1,14 +1,12 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
 	"errors"
+	"strings"
+
 	"github.com/spf13/cobra"
 	"hua-cloud.com/tools/image-sync/internal/client"
 	"hua-cloud.com/tools/image-sync/internal/types"
-	"strings"
 )
 
 var (
@@ -59,6 +57,10 @@ var syncCmd = &cobra.Command{
 
 		if err != nil {
 			return err
+		}
+
+		if !deploy {
+			return nil
 		}
 
 		return c.Deploy(types.CmdRequest{
