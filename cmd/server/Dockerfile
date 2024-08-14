@@ -1,4 +1,4 @@
-FROM alpine
+FROM arm64v8/alpine
 
 COPY image-sync-server /opt/image-sync-server
 COPY config.yaml /opt/config.yaml

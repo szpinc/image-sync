@@ -97,9 +97,9 @@ func ParseDockerImage(image string) (string, string, string, string) {
 
 	// Check if the image contains a tag
 	if strings.Contains(image, ":") {
-		parts := strings.Split(image, ":")
-		image = parts[0]
-		tag = parts[1]
+		idx := strings.LastIndex(image, ":")
+		tag = image[idx+len(":"):]
+		image = image[:idx]
 	}
 
 	// Check if the image contains a repository
