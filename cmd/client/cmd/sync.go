@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"hua-cloud.com/tools/image-sync/internal/client"
-	"hua-cloud.com/tools/image-sync/internal/types"
+	"github.com/szpinc/image-sync/internal/client"
+	"github.com/szpinc/image-sync/internal/types"
 )
 
 var (

@@ -6,7 +6,7 @@ import (
 
 	"github.com/heroku/docker-registry-client/registry"
 	"github.com/opencontainers/go-digest"
-	"hua-cloud.com/tools/image-sync/internal/config"
+	"github.com/szpinc/image-sync/internal/config"
 )
 
 func TestImageServer_GetManifest(t *testing.T) {

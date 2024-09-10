@@ -2,7 +2,7 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
-	"hua-cloud.com/tools/image-sync/internal/middleware"
+	"github.com/szpinc/image-sync/internal/middleware"
 )
 
 func (s *ImageServer) InitRouters() {

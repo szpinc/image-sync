@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"hua-cloud.com/tools/image-sync/internal/types"
 	"net/http"
+
+	"github.com/szpinc/image-sync/internal/types"
 
 	"github.com/gin-gonic/gin"
 )

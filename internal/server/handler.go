@@ -2,14 +2,15 @@ package server
 
 import (
 	"fmt"
-	"github.com/docker/distribution/manifest/schema2"
-	"github.com/gin-gonic/gin"
-	"github.com/opencontainers/go-digest"
-	"golang.org/x/crypto/ssh"
-	"hua-cloud.com/tools/image-sync/internal/types"
 	"os"
 	"path"
 	"time"
+
+	"github.com/docker/distribution/manifest/schema2"
+	"github.com/gin-gonic/gin"
+	"github.com/opencontainers/go-digest"
+	"github.com/szpinc/image-sync/internal/types"
+	"golang.org/x/crypto/ssh"
 )
 
 var imageServer *ImageServer

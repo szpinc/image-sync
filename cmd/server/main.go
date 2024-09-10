@@ -2,10 +2,11 @@ package main
 
 import (
 	"flag"
-	"gopkg.in/yaml.v3"
-	"hua-cloud.com/tools/image-sync/internal/config"
-	"hua-cloud.com/tools/image-sync/internal/server"
 	"os"
+
+	"github.com/szpinc/image-sync/internal/config"
+	"github.com/szpinc/image-sync/internal/server"
+	"gopkg.in/yaml.v3"
 )
 
 var configFile string

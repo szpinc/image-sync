@@ -1,8 +1,9 @@
 package client
 
 import (
-	"hua-cloud.com/tools/image-sync/internal/types"
 	"testing"
+
+	"github.com/szpinc/image-sync/internal/types"
 )
 
 func TestClient_CheckBlobExists(t *testing.T) {

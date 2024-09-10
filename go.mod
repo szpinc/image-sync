@@ -1,4 +1,4 @@
-module hua-cloud.com/tools/image-sync
+module github.com/szpinc/image-sync
 
 go 1.22
 
