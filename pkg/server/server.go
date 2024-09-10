@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/heroku/docker-registry-client/registry"
 	"github.com/opencontainers/go-digest"
-	"github.com/szpinc/image-sync/internal/config"
-	"github.com/szpinc/image-sync/internal/util"
+	"github.com/szpinc/image-sync/pkg/config"
+	"github.com/szpinc/image-sync/pkg/util"
 )
 
 type ImageServer struct {

@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/szpinc/image-sync/internal/types"
+	"github.com/szpinc/image-sync/pkg/types"
 
 	"github.com/gin-gonic/gin"
 )

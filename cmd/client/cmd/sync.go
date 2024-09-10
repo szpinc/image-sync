@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/szpinc/image-sync/internal/client"
-	"github.com/szpinc/image-sync/internal/types"
+	"github.com/szpinc/image-sync/pkg/client"
+	"github.com/szpinc/image-sync/pkg/types"
 )
 
 var (

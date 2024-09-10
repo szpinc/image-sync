@@ -4,8 +4,8 @@ import (
 	"flag"
 	"os"
 
-	"github.com/szpinc/image-sync/internal/config"
-	"github.com/szpinc/image-sync/internal/server"
+	"github.com/szpinc/image-sync/pkg/config"
+	"github.com/szpinc/image-sync/pkg/server"
 	"gopkg.in/yaml.v3"
 )
 

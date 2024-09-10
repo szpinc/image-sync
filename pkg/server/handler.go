@@ -9,7 +9,7 @@ import (
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/gin-gonic/gin"
 	"github.com/opencontainers/go-digest"
-	"github.com/szpinc/image-sync/internal/types"
+	"github.com/szpinc/image-sync/pkg/types"
 	"golang.org/x/crypto/ssh"
 )
 

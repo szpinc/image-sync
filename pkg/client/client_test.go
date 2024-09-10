@@ -3,7 +3,7 @@ package client
 import (
 	"testing"
 
-	"github.com/szpinc/image-sync/internal/types"
+	"github.com/szpinc/image-sync/pkg/types"
 )
 
 func TestClient_CheckBlobExists(t *testing.T) {
