@@ -19,6 +19,7 @@ var (
 	targetPort        int
 	targetComposeFile string
 	targetAppName     string
+	targetRepo        string
 	deploy            bool
 )
 
@@ -53,7 +54,13 @@ var syncCmd = &cobra.Command{
 			},
 		})
 
-		err := c.Copy(name, tag)
+		if targetRepo == "" {
+			targetRepo = name
+		}
+
+		println("target repo:", targetRepo)
+
+		err := c.Copy(name, targetRepo, tag)
 
 		if err != nil {
 			return err
@@ -87,6 +94,7 @@ func init() {
 	syncCmd.Flags().IntVarP(&targetPort, "dest-deploy-port", "", 22, "target deploy port")
 	syncCmd.Flags().StringVarP(&targetComposeFile, "dest-deploy-compose-file", "", "", "target deploy docker compose file")
 	syncCmd.Flags().StringVarP(&targetAppName, "application", "", "", "target app name")
+	syncCmd.Flags().StringVarP(&targetRepo, "target-repo", "", "", "target repo")
 	syncCmd.Flags().BoolVarP(&deploy, "deploy", "d", false, "deploy image to target registry")
 
 }

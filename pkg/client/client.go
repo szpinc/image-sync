@@ -68,7 +68,7 @@ func (c *Client) PutManifest(repository string, tag string, manifest *schema2.De
 	return checkError(err)
 }
 
-func (c *Client) Copy(repository string, tag string) error {
+func (c *Client) Copy(srcRepository string, targetRepository string, tag string) error {
 
 	// 创建registry client
 	registryClient, err := newRegistryClient(c.config.Registry)
@@ -77,7 +77,7 @@ func (c *Client) Copy(repository string, tag string) error {
 		return err
 	}
 
-	manifest, err := registryClient.ManifestV2(repository, tag)
+	manifest, err := registryClient.ManifestV2(srcRepository, tag)
 
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func (c *Client) Copy(repository string, tag string) error {
 			// 上传layer,引入重试,5秒重试一次
 			err := retry.Do(func() error {
 				fmt.Printf("copy blob: %s\n", blob.String())
-				return checkError(uploadBlob(repository, blob, c, registryClient))
+				return checkError(uploadBlob(srcRepository, targetRepository, blob, c, registryClient))
 			},
 				retry.Attempts(5),
 				retry.Delay(time.Second*5),
@@ -114,7 +114,7 @@ func (c *Client) Copy(repository string, tag string) error {
 	wg.Wait()
 
 	// 更新manifest
-	if err = c.PutManifest(repository, tag, manifest); err != nil {
+	if err = c.PutManifest(targetRepository, tag, manifest); err != nil {
 		return err
 	}
 
@@ -157,9 +157,9 @@ func (c *Client) Deploy(request types.CmdRequest) error {
 	return nil
 }
 
-func uploadBlob(repo string, digest digest.Digest, c *Client, srcRegistry *registry.Registry) error {
+func uploadBlob(srcRepo string, targetRepo string, digest digest.Digest, c *Client, srcRegistry *registry.Registry) error {
 	// 检测blob hash是否存在
-	exists, err := c.CheckBlobExists(repo, digest)
+	exists, err := c.CheckBlobExists(targetRepo, digest)
 
 	if err != nil {
 		return err
@@ -169,7 +169,7 @@ func uploadBlob(repo string, digest digest.Digest, c *Client, srcRegistry *regis
 		return nil
 	}
 
-	blob, err := srcRegistry.DownloadBlob(repo, digest)
+	blob, err := srcRegistry.DownloadBlob(srcRepo, digest)
 
 	if err != nil {
 		return err
@@ -179,7 +179,7 @@ func uploadBlob(repo string, digest digest.Digest, c *Client, srcRegistry *regis
 		_ = blob.Close()
 	}(blob)
 
-	return c.UploadBlob(repo, digest, blob)
+	return c.UploadBlob(targetRepo, digest, blob)
 }
 
 func getRespBody(body io.ReadCloser) (*types.Resp, error) {
