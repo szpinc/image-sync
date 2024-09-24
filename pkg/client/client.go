@@ -20,7 +20,7 @@ import (
 	"github.com/szpinc/image-sync/pkg/types"
 )
 
-var ErrUnauthorized = errors.New("Unauthorized")
+var ErrUnauthorized = errors.New("unauthorized")
 
 type Client struct {
 	config *types.ClientConfig
@@ -63,9 +63,13 @@ func (c *Client) PutManifest(repository string, tag string, manifest *schema2.De
 
 	url := fmt.Sprintf("%s/api/v1/manifest/push?repository=%s&tag=%s", c.config.Server.Address, repository, tag)
 
-	_, err := c.doRequest(http.MethodPost, url, bytes.NewBuffer(requestBody), "application/json")
+	resp, err := c.doRequest(http.MethodPost, url, bytes.NewBuffer(requestBody), "application/json")
 
-	return checkError(err)
+	if checkError(err) != nil {
+		return err
+	}
+	fmt.Printf("%v", resp.Data)
+	return nil
 }
 
 func (c *Client) Copy(srcRepository string, targetRepository string, tag string) error {
@@ -83,7 +87,7 @@ func (c *Client) Copy(srcRepository string, targetRepository string, tag string)
 		return err
 	}
 
-	digests := []digest.Digest{}
+	var digests []digest.Digest
 
 	// 添加配置blob
 	digests = append(digests, manifest.Config.Digest)
@@ -227,6 +231,7 @@ func (c *Client) doRequest(method string, url string, body io.Reader, contentTyp
 
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", c.config.Server.Username, c.config.Server.Password))))
+	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
 
 	resp, err := http.DefaultClient.Do(req)
 
@@ -273,7 +278,7 @@ func checkError(err error) error {
 		return nil
 	}
 
-	if err == ErrUnauthorized {
+	if errors.Is(err, ErrUnauthorized) {
 		fmt.Println("Unauthorized")
 		os.Exit(1)
 	}

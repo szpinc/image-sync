@@ -25,15 +25,28 @@ func TestClient_CheckBlobExists(t *testing.T) {
 }
 
 func TestClient_Copy(t *testing.T) {
+
+	//testcases := []struct {
+	//	srcRepository    string
+	//	targetRepository string
+	//	tag              string
+	//}{
+	//	{
+	//
+	//	},
+	//}
+
 	client := NewClient(&types.ClientConfig{
 		Version: "v1",
 		Server: types.Server{
-			Address: "https://smartum.sz.gov.cn/park/image/sync",
+			Address:  "http://127.0.0.1:23333",
+			Username: "admin",
+			Password: "9YVtWmou1CxfJ3LXya8e",
 		},
 		Registry: types.RegistryConfig{Url: "http://harbor.hy-zw.com", Username: "admin", Password: "Hyzs(%23@7&8"},
 	})
 
-	err := client.Copy("park/tibmas2-webapi", "20240624114951")
+	err := client.Copy("zhmz/web-tibmas-oauth", "mzj_hyzs/web-tibmas-oauth", "20240920113435-arm64")
 
 	if err != nil {
 		t.Fatal(err)

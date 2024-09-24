@@ -60,7 +60,7 @@ func pushManifest(c *gin.Context) (data any, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, imageServer.PushManifest(repository, tag, &manifest)
+	return imageServer.PushManifest(repository, tag, &manifest)
 }
 
 func exec(c *gin.Context) (data any, err error) {

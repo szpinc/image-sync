@@ -1,7 +1,9 @@
 package server
 
 import (
+	"fmt"
 	"io"
+	"net/url"
 
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/gin-gonic/gin"
@@ -62,6 +64,15 @@ func (s *ImageServer) HasBlob(repository string, digest digest.Digest) (bool, er
 	return s.Registry.HasBlob(repository, digest)
 }
 
-func (s *ImageServer) PushManifest(repository string, tag string, manifest *schema2.DeserializedManifest) error {
-	return s.Registry.PutManifest(repository, tag, manifest)
+func (s *ImageServer) PushManifest(repository string, tag string, manifest *schema2.DeserializedManifest) (string, error) {
+	err := s.Registry.PutManifest(repository, tag, manifest)
+	if err != nil {
+		return "", err
+	}
+	repoUrl, err := url.Parse(s.Registry.URL)
+	if err != nil {
+		return "", err
+	}
+	repoUrl = repoUrl.JoinPath(repository)
+	return fmt.Sprintf("%s/%s:%s", repoUrl.Host, repoUrl.Path, tag), nil
 }
