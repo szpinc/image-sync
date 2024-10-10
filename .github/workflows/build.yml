@@ -25,7 +25,7 @@ jobs:
         id: get_tag
         run: echo "##[set-output name=tag;]${GITHUB_REF##*/}"
       - name: Build
-        run: GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -o image-sync-${{ steps.get_tag.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}
+        run: GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build cmd/client -o image-sync-${{ steps.get_tag.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}
 
       - name: Archive binaries
         run: |
