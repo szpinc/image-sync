@@ -1,0 +1,51 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # 只在版本标签推送时触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [linux, darwin, windows]
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.23'
+      - name: Extract version tag
+        id: get_tag
+        run: echo "##[set-output name=tag;]${GITHUB_REF##*/}"
+      - name: Build
+        run: GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -o image-sync-${{ steps.get_tag.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}
+
+      - name: Archive binaries
+        run: |
+          mkdir -p release
+          mv image-sync-* release/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: release-binaries
+          path: release/*
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag: ${{ github.ref }}
+          files: release/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
